@@ -1,15 +1,7 @@
 import Head from "next/head";
-import Image from "next/image";
-import { Inter } from "@next/font/google";
 import styles from "../styles/Home.module.css";
 import Header from "../components/Header";
-import BalanceContract from "../components/BalanceContract";
-import { contractAddresses } from "../constants/contractAddresses.json";
-import { abi } from "../constants/abi.json";
-import { Button } from "web3uikit";
-import { useMoralis, useWeb3Contract } from "react-moralis";
-
-const inter = Inter({ subsets: ["latin"] });
+import Token from "../components/FuncToken";
 
 export default function Home() {
   return (
@@ -21,7 +13,7 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <Header />
-      <BalanceContract />
+      <Token />
       <main className={styles.main}></main>
     </>
   );
