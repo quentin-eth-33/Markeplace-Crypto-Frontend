@@ -1,43 +1,84 @@
-import { contractAddresses, abi } from "../constants";
+import {
+  contractAddresses,
+  abi,
+  abiLinkToken,
+  contractAddressLink,
+} from "../constants";
 import { useState } from "react";
 import { useMoralis, useWeb3Contract } from "react-moralis";
 
 export default function Token() {
-  let [nameToken, setNameToken] = useState("0");
-  let nameTest;
-
+  let [mess, setMess] = useState("0");
+  let [balanceLink, setBalanceLink] = useState("0");
   const { Moralis, isWeb3Enabled, chainId: chainIdHex } = useMoralis();
   const chainId = parseInt(chainIdHex);
-  console.log(`ChainId is ${chainId}`);
+  balanceLink = 0;
+
+  const senderAddress = "0xD9aaEf7153D171da4618BF3AF21fEf6E73849dd1";
+  const recipientAddress = "0x280c83b9B78aFFB194931b3ECAaBc8E528a7Ed5D";
+  const amount = 5000000000000000;
+
+  const linkTokenAddress = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
 
   const tokenAddress =
-    chainId in contractAddresses ? contractAddresses[chainId][1] : null;
-  console.log(`Contract address: ${tokenAddress}`);
+    chainId in contractAddresses ? contractAddresses[chainId][0] : null;
 
-  // "getName" c'est le nom que nous voulons que la fonction ait dans notre js, on peut mettre n'importe quoi
-  const { runContractFunction: getName } = useWeb3Contract({
+  const { runContractFunction: transferFrom } = useWeb3Contract({
+    abi: abiLinkToken,
+    contractAddress: linkTokenAddress,
+    functionName: "transferFrom",
+    params: [senderAddress, recipientAddress, amount],
+  });
+
+  const { runContractFunction: allowance } = useWeb3Contract({
+    abi: abiLinkToken,
+    contractAddress: linkTokenAddress,
+    functionName: "allowance",
+    params: [senderAddress, recipientAddress],
+  });
+
+  const { runContractFunction: receiveLinkTokens } = useWeb3Contract({
     abi: abi,
     contractAddress: tokenAddress,
-    functionName: "name",
+    functionName: "receiveLinkTokens",
     params: {},
   });
 
-  const { runContractFunction: scam } = useWeb3Contract({
+  const { runContractFunction: getBalanceInLink } = useWeb3Contract({
     abi: abi,
     contractAddress: tokenAddress,
-    functionName: "scam",
+    functionName: "getBalanceInLink",
     params: {},
   });
 
-  async function getNameFunc() {
-    if (tokenAddress != null) {
-      nameTest = await getName();
-    } else {
-      nameTest =
-        "Le Token n'est pas déployé sur ce réseau ou veuillez connecter votre wallet";
+  async function handleTransferFrom() {
+    try {
+      const resultAllowance = await allowance();
+      if (resultAllowance.lt(amount)) {
+        setMess("Insufficient allowance");
+        return;
+      }
+      const tx = await transferFrom();
+      await tx.wait();
+      setMess("Tokens transferred successfully!");
+    } catch (error) {
+      setMess("Error transferring tokens");
+      console.error(error);
     }
-    await scam();
-    setNameToken(nameTest);
+
+    try {
+      const tx = await receiveLinkTokens();
+      await tx.wait();
+      setMess("Tokens received successfully!");
+    } catch (error) {
+      setMess("Error receiving tokens");
+      console.error(error);
+    }
+  }
+
+  async function getBalanceLink() {
+    balanceLink = await getBalanceInLink();
+    setBalanceLink(balanceLink);
   }
 
   return (
@@ -45,12 +86,20 @@ export default function Token() {
       <h1 className="py-4 px-4 font-bold text-3xl">Marketplace Crypto</h1>
       <button
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-auto"
-        onClick={async () => await getNameFunc()}
+        onClick={async () => await handleTransferFrom()}
       >
-        Afficher le nom de la crypto
+        Transférer 0.005 LINK
       </button>
       <br />
-      <h1>Nom de la crypto: {nameToken}</h1>
+      <h1>{mess}</h1>
+      <br />
+      <button
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-auto"
+        onClick={async () => await getBalanceLink()}
+      >
+        Mise à jour Balance Link
+      </button>
+      <h1>Balance Link: {balanceLink}</h1>
     </div>
   );
 }
